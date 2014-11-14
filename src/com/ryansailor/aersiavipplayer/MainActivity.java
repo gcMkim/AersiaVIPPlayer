@@ -2,6 +2,7 @@ package com.ryansailor.aersiavipplayer;
 
 import android.app.Activity;
 import android.app.Notification;
+import android.content.ComponentName;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.AudioManager.OnAudioFocusChangeListener;
@@ -10,6 +11,7 @@ import android.media.MediaPlayer.OnBufferingUpdateListener;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -33,7 +35,7 @@ public class MainActivity extends Activity implements
 	
 	
 	/* Media Player */
-	private ComplexMediaPlayer mp;
+	private static ComplexMediaPlayer mp;
 	private int trackCurrentTime;
 	
 	
@@ -82,6 +84,9 @@ public class MainActivity extends Activity implements
 	
 	/* Data */
 	String[] parsedMusicPaths;
+	
+	//headset button support	
+    private ComponentName mRemoteControlResponder;
 	
 	
 	/*
@@ -174,6 +179,12 @@ public class MainActivity extends Activity implements
 			// TODO: If Audio Focus is not granted at startup
 		}
 		
+		//headset button
+		 mRemoteControlResponder = new ComponentName(getPackageName(),
+	                MediaButtonIntentReceiver.class.getName());	
+		 
+		 audioManager.registerMediaButtonEventReceiver(mRemoteControlResponder);
+		
 		// UI Setup	
 		trackTime = (TextView) findViewById(R.id.music_time);
 		trackList = (ListView) findViewById(R.id.music_list);
@@ -203,6 +214,8 @@ public class MainActivity extends Activity implements
 	public void onDestroy() {
 		super.onDestroy();
 		trackTimeHandler.removeCallbacks(r);
+		audioManager.unregisterMediaButtonEventReceiver(
+                mRemoteControlResponder);
 		if(mp != null)
 			mp.destroy();
 	}
@@ -320,6 +333,12 @@ public class MainActivity extends Activity implements
 		mp.playNext();
 		updateUINowPlaying();
 		setUIPlay();
+	}
+	
+	public static void playNextRandom() {
+		if (mp != null) {
+			mp.playRandom();
+		}
 	}
 	
 	/*
@@ -459,7 +478,11 @@ public class MainActivity extends Activity implements
 	}
 	
 	private void setUIPause() {
-		playButton.setIcon(getResources().getDrawable(R.drawable.ic_action_play));
+		//on some handsets, the system will pull away and restore audio focus on startup
+		//before playButton is set to the proper view.
+		if (playButton != null) { 
+			playButton.setIcon(getResources().getDrawable(R.drawable.ic_action_play));
+		}
 	}
 
 	private void startNewPlaylist(String msg, PlayList pl) {
@@ -473,6 +496,19 @@ public class MainActivity extends Activity implements
 		getActionBar().setTitle(pl.getName());
 	}
 
+
+/** Control methods **/
+	
+	@Override
+	public boolean onKeyDown(int keyCode, KeyEvent event) {
+
+		switch (keyCode) { 
+		case KeyEvent.KEYCODE_HEADSETHOOK: 	playNextRandom();
+		return true;
+		default: return false;		
+		} 
+
+	}
 
 	
 }
